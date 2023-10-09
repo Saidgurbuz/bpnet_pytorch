@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+from torch.distributions.multinomial import Multinomial
 
 
 def multinomial_nll(true_counts, logits):
@@ -19,7 +20,7 @@ def multinomial_nll(true_counts, logits):
 	counts_per_example = true_counts_perm.sum(dim=-1)
 
 
-	multinomial_dist = dist.Multinomial(counts_per_example, logits=logits_perm)
+	multinomial_dist = Multinomial(counts_per_example, logits=logits_perm)
 
 	batch_size = float(true_counts.size(0))
 
