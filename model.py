@@ -49,8 +49,8 @@ class BPNet(nn.Module):
         self.profile_shape_heads = nn.ModuleList(
             [
                 nn.Sequential(
-                    nn.ConvTranspose2d(64, 2, kernel_size=(25, 1), padding="same"),
-                    nn.Flatten(),
+                    nn.ConvTranspose2d(64, 2, kernel_size=(25, 1), padding=(12, 0)),
+                    # nn.Flatten(), # check doing without this layer
                 )
                 for _ in range(num_tasks)
             ]
@@ -65,18 +65,23 @@ class BPNet(nn.Module):
 
     def forward(self, x):
         # Body
-        x = self.conv1(x)
-        x = self.relu(x)
+        x = self.relu(self.conv1(x))
         for conv_layer in self.conv_layers:
             x = self.relu(conv_layer(x))
 
         # Profile Shape and Total Counts Heads
-        profile_shape_outputs = [
-            head(x.unsqueeze(2)) for head in self.profile_shape_heads
-        ]
-        total_counts_outputs = [head(x) for head in self.total_counts_heads]
+        outputs = []
+        for index in range(num_tasks):
+            px = (
+                self.profile_shape_heads[index](x.unsqueeze(3))
+                .squeeze(-1)
+                .permute(0, 2, 1)
+            )
+            outputs.append(px)  # profile shape output appended
+            cx = self.total_counts_heads[index](x)
+            outputs.append(cx)  # total counts output appended
 
-        return profile_shape_outputs + total_counts_outputs
+        return outputs
 
 
 num_tasks = 4  # We are using 4 TFs
@@ -96,6 +101,10 @@ def custom_loss(outputs, targets):
         total_loss += loss_weights[i] * loss_fn(outputs[i], targets[i])
     return total_loss
 
+
+dna_bps = torch.randint(4, (1000,))
+dna_seq = F.one_hot(dna_bps, num_classes=4).type(torch.FloatTensor)
+output = model(dna_seq.unsqueeze(0).permute(0, 2, 1))
 
 # Early stopping parameters
 patience = 5
