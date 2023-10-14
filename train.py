@@ -69,6 +69,7 @@ if __name__ == "__main__":
     num_epochs = 100
     learning_rate = 0.004
 
+    # TODO
     # dna_sequences = ...  will be implemented
     # targets = ... will be implemented
 
