@@ -3,6 +3,32 @@ from torch.distributions.multinomial import Multinomial
 import torch.nn.functional as F
 
 
+
+ONE_HOT_EMBED = torch.zeros(1000, 4)
+ONE_HOT_EMBED[ord("a")] = torch.Tensor([1.0, 0.0, 0.0, 0.0])
+ONE_HOT_EMBED[ord("c")] = torch.Tensor([0.0, 1.0, 0.0, 0.0])
+ONE_HOT_EMBED[ord("g")] = torch.Tensor([0.0, 0.0, 1.0, 0.0])
+ONE_HOT_EMBED[ord("t")] = torch.Tensor([0.0, 0.0, 0.0, 1.0])
+ONE_HOT_EMBED[ord("n")] = torch.Tensor([0.0, 0.0, 0.0, 0.0])
+ONE_HOT_EMBED[ord("x")] = torch.Tensor([0.0, 0.0, 0.0, 0.0])
+ONE_HOT_EMBED[ord("o")] = torch.Tensor([0.0, 0.0, 0.0, 0.0])
+ONE_HOT_EMBED[ord("p")] = torch.Tensor([0.25, 0.25, 0.25, 0.25])
+ONE_HOT_EMBED[ord("A")] = torch.Tensor([1.0, 0.0, 0.0, 0.0])
+ONE_HOT_EMBED[ord("C")] = torch.Tensor([0.0, 1.0, 0.0, 0.0])
+ONE_HOT_EMBED[ord("G")] = torch.Tensor([0.0, 0.0, 1.0, 0.0])
+ONE_HOT_EMBED[ord("T")] = torch.Tensor([0.0, 0.0, 0.0, 1.0])
+ONE_HOT_EMBED[ord("N")] = torch.Tensor([0.0, 0.0, 0.0, 0.0])
+ONE_HOT_EMBED[ord("X")] = torch.Tensor([0.0, 0.0, 0.0, 0.0])
+ONE_HOT_EMBED[ord("O")] = torch.Tensor([0.0, 0.0, 0.0, 0.0])
+ONE_HOT_EMBED[ord("P")] = torch.Tensor([0.25, 0.25, 0.25, 0.25])
+ONE_HOT_EMBED[ord(".")] = torch.Tensor([0.25, 0.25, 0.25, 0.25])
+
+def seq_to_one_hot(seq: str) -> torch.Tensor:
+    seq_chrs = torch.tensor(list(map(ord, list(seq))), dtype=torch.long)
+    return ONE_HOT_EMBED[seq_chrs]
+
+
+
 def one_hot_encoder(dna_sequence):
     labels = {"a": 0, "A": 0, "c": 1, "C": 1, "g": 2, "G": 2, "t": 3, "T": 3}
     labeled_dna_sequence = [
