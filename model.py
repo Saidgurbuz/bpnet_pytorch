@@ -36,7 +36,7 @@ class BPNet(nn.Module):
 
     def forward(self, x):
         # Body
-        x = self.relu(self.conv1(x))
+        x = self.relu(self.conv1(x.permute(0, 2, 1)))
         for conv_layer in self.conv_layers:
             x = self.relu(conv_layer(x))
 
