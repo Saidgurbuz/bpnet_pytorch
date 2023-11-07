@@ -1,7 +1,7 @@
-from model_try import BPNet
-from model_try import custom_loss
-import torch
+from model import BPNet
+from helpers import custom_loss
 import torch.nn.functional as F
+import torch
 
 
 def test_bpnet_model():
@@ -13,13 +13,15 @@ def test_bpnet_model():
     model = BPNet(num_tasks)
 
     dna_seq = torch.randint(num_channels, (batch_size * sequence_length,))
-    dna_batch = F.one_hot(dna_seq, num_classes=num_channels).type(torch.FloatTensor)
+    dna_batch = F.one_hot(
+        dna_seq, num_classes=num_channels).type(torch.FloatTensor)
     outputs = model(
         dna_batch.unsqueeze(0)
         .view(batch_size, sequence_length, num_channels)
         .permute(0, 2, 1)
     )
-    assert outputs[0].shape == (batch_size, sequence_length, 2)  # profile head output
+    assert outputs[0].shape == (
+        batch_size, sequence_length, 2)  # profile head output
     assert outputs[1].shape == (batch_size, 2)  # total counts head output
 
     targets = []
