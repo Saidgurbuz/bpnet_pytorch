@@ -1,5 +1,4 @@
-from model_try import custom_loss
-from model_try import BPNet
+from model import BPNet
 from dataset import DNADataset
 from helpers import custom_loss
 from torch.utils.data import DataLoader
@@ -23,8 +22,8 @@ def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
             optimizer.zero_grad()
 
             outputs = model(inputs)
-
             loss = loss_fn(outputs, targets)
+            print('batch loss: ', loss)
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
@@ -54,12 +53,14 @@ def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
             else:
                 counter += 1
                 if counter >= patience:
-                    print(f"Early stopping after {epoch+1} epochs without improvement.")
+                    print(
+                        f"Early stopping after {epoch+1} epochs without improvement.")
                     return model
 
         else:
             print(
-                "Epoch [{}/{}], train loss: {}".format(epoch + 1, num_epochs, avg_loss)
+                "Epoch [{}/{}], train loss: {}".format(
+                    epoch + 1, num_epochs, avg_loss)
             )
     return model
 
@@ -72,14 +73,15 @@ if __name__ == "__main__":
     num_epochs = 100
     learning_rate = 0.004
 
-    tasks = ['Oct4', 'Sox2', 'Nanog', 'Klf4']
+    tasks = ['oct4', 'sox2', 'nanog', 'klf4']
     # TODO
-    choromosomes = ['chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 
-                    'chr8', 'chr9', 'chr10', 'chr11', 'chr12', 'chr13', 'chr14',
-                    'chr15', 'chr16', 'chr17', 'chr18', 'chr19', 'chrX', 'chrY']
-    
-    train_chrs = ['chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8',
-                  'chr9', 'chr10', 'chr11', 'chr12', 'chr13', 'chr14', 'chr15']
+    chromosomes = ['chr1', 'chr10', 'chr11', 'chr12', 'chr13', 'chr14', 'chr15',
+                   'chr16', 'chr17', 'chr18', 'chr19', 'chr2', 'chr3', 'chr4',
+                   'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chrX', 'chrY']
+
+    train_chrs = ['chr1', 'chr10', 'chr11', 'chr12', 'chr13', 'chr14', 'chr15',
+                  'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9']
+
     val_chrs = ['chr16', 'chr17', 'chr18']
     test_chrs = ['chr19', 'chrX', 'chrY']
 
@@ -89,8 +91,8 @@ if __name__ == "__main__":
     pos_counts = []
     neg_counts = []
     for task in tasks:
-        pos_counts.append(pyBigWig.open(f'{task}_counts.pos.bw'))
-        neg_counts.append(pyBigWig.open(f'{task}_counts.neg.bw'))
+        pos_counts.append(pyBigWig.open(f'{task}-counts.pos.bw'))
+        neg_counts.append(pyBigWig.open(f'{task}-counts.neg.bw'))
 
     # dna_sequences = ...  will be implemented
     with open(dna_file, 'r') as file:
@@ -108,14 +110,20 @@ if __name__ == "__main__":
     val_targets = (val_chrs, pos_counts, neg_counts)
     test_targets = (test_chrs, pos_counts, neg_counts)
 
-    train_dataset = DNADataset(train_sequences, train_targets, sequence_length, num_tasks)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_dataset = DNADataset(
+        train_sequences, train_targets, sequence_length, num_tasks)
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True)
 
-    val_dataset = DNADataset(train_sequences, val_targets, sequence_length, num_tasks)
-    val_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+    val_dataset = DNADataset(
+        train_sequences, val_targets, sequence_length, num_tasks)
+    val_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=False)
 
-    test_dataset = DNADataset(train_sequences, test_targets, sequence_length, num_tasks)
-    test_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+    test_dataset = DNADataset(
+        train_sequences, test_targets, sequence_length, num_tasks)
+    test_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=False)
 
     model = BPNet(num_tasks)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
