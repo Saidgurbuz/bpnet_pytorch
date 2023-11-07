@@ -55,11 +55,12 @@ def multinomial_nll(logits, true_counts):
     batch_size = true_counts_perm.size(0)
     num_channels = true_counts_perm.size(1)
     loss = 0.0
+
     for i in range(batch_size):
         channel_loss = 0.0
         for j in range(num_channels):
-            counts_per_example = true_counts_perm[i, j].sum().item()
-            multinomial_dist = Multinomial(counts_per_example, logits=logits_perm[i, j])
+            counts_per_example = int(true_counts_perm[i, j].sum().item())
+            multinomial_dist = Multinomial(counts_per_example, logits=logits_perm[i, j], validate_args=False)
             neg_log_likelihood = -multinomial_dist.log_prob(true_counts_perm[i, j])
             channel_loss += neg_log_likelihood.sum()
         loss += channel_loss / float(num_channels)
@@ -76,6 +77,11 @@ loss_weights = [1, 10] * num_tasks
 
 def custom_loss(outputs, targets):
     total_loss = 0.0
+    # change view to get task dimension first, batch dimension second
+    targets = targets.permute(1, 0, 2, 3)
     for i, loss_fn in enumerate(loss_functions):
-        total_loss += loss_weights[i] * loss_fn(outputs[i], targets[i])
+        if(i % 2 == 1):
+            total_loss += loss_weights[i] * loss_fn(outputs[i], targets[i][:,0,:])
+        else:
+            total_loss += loss_weights[i] * loss_fn(outputs[i], targets[i])
     return total_loss
