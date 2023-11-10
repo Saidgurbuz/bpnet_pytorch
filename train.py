@@ -1,5 +1,6 @@
 from model import BPNet
 from dataset import DNADataset
+from helpers import collate_fn
 from helpers import custom_loss
 from torch.utils.data import DataLoader
 import torch
@@ -11,19 +12,22 @@ import pyBigWig
 
 def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
     if val_loader:
-        patience = 5
+        patience = 10
         best_val_loss = float("inf")
         counter = 0
     for epoch in range(num_epochs):
         total_loss = 0.0
         for i, data in enumerate(train_loader):
-            inputs, targets = data
-
+            inputs, chip_seq_targets, bias_targets = data
             optimizer.zero_grad()
 
             outputs = model(inputs)
-            loss = loss_fn(outputs, targets)
-            print('batch loss: ', loss)
+            loss = loss_fn(outputs, (chip_seq_targets, bias_targets))
+            print(
+                "Epoch [{}/{}], Batch [{}/{}] train loss: {}".format(
+                    epoch + 1, num_epochs, i+1, len(train_loader), loss
+                )
+            )
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
@@ -35,9 +39,9 @@ def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
             total_val_loss = 0.0
             with torch.no_grad():
                 for index, data in enumerate(val_loader):
-                    inputs, targets = data
+                    inputs, chip_seq_targets, bias_targets = data
                     outputs = model(inputs)
-                    loss = loss_fn(outputs, targets)
+                    loss = loss_fn(outputs, (chip_seq_targets, bias_targets))
                     total_val_loss += loss
                 avg_val_loss = total_val_loss / (index + 1)
             print(
@@ -74,7 +78,7 @@ if __name__ == "__main__":
     learning_rate = 0.004
 
     tasks = ['oct4', 'sox2', 'nanog', 'klf4']
-    # TODO
+
     chromosomes = ['chr1', 'chr10', 'chr11', 'chr12', 'chr13', 'chr14', 'chr15',
                    'chr16', 'chr17', 'chr18', 'chr19', 'chr2', 'chr3', 'chr4',
                    'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chrX', 'chrY']
@@ -94,18 +98,15 @@ if __name__ == "__main__":
         pos_counts.append(pyBigWig.open(f'{task}-counts.pos.bw'))
         neg_counts.append(pyBigWig.open(f'{task}-counts.neg.bw'))
 
-    # dna_sequences = ...  will be implemented
+    # dna_sequences
     with open(dna_file, 'r') as file:
         dna = list(SeqIO.parse(file, 'fasta'))
-    # dna_sequences = Seq('')
-    # with open(dna_file, 'r') as dna:
-    #     for sequence in SeqIO.parse(dna, 'fasta'):
-    #         dna_sequences += sequence.seq
+
     train_sequences = list(filter(lambda c: c.id in train_chrs, dna))
     val_sequences = list(filter(lambda c: c.id in val_chrs, dna))
     test_sequences = list(filter(lambda c: c.id in test_chrs, dna))
 
-    # targets = ... will be implemented
+    # targets
     train_targets = (train_chrs, pos_counts, neg_counts)
     val_targets = (val_chrs, pos_counts, neg_counts)
     test_targets = (test_chrs, pos_counts, neg_counts)
@@ -113,7 +114,7 @@ if __name__ == "__main__":
     train_dataset = DNADataset(
         train_sequences, train_targets, sequence_length, num_tasks)
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True)
+        train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
     val_dataset = DNADataset(
         train_sequences, val_targets, sequence_length, num_tasks)
@@ -130,4 +131,5 @@ if __name__ == "__main__":
     loss_fn = custom_loss
 
     # train
-    train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader)
+    train(train_loader, model, num_epochs, optimizer,
+          loss_fn, val_loader=val_loader)

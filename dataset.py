@@ -29,10 +29,12 @@ class DNADataset(Dataset):
 
         start = offset
         end = start + self.sequence_length
+        # get input
         input = seq_to_one_hot(str(chr.seq[start:end]))
-        # TODO will configure getting target (actually multiple target since we have multiple tasks and multiple head)
-        target = torch.zeros(self.num_tasks * 2, self.sequence_length, 2)
 
+        # get profile shape and bias targets
+        chip_seq_target = torch.zeros(self.num_tasks, self.sequence_length, 2)
+        bias_target = torch.zeros(self.num_tasks, 2)
         name_chr = self.targets[0][chr_idx]
         for task in range(self.num_tasks):
             # get profile shape for both positive and negative strands
@@ -42,11 +44,10 @@ class DNADataset(Dataset):
                 self.targets[2][task].values(name_chr, start, end))
             ps_pos[ps_pos != ps_pos] = 0
             ps_neg[ps_neg != ps_neg] = 0
-            target[task * 2] = torch.stack([ps_pos, ps_neg], dim=1)
+            chip_seq_target[task] = torch.stack([ps_pos, ps_neg], dim=1)
 
             # get total counts
             tc_pos = ps_pos.sum()
             tc_neg = ps_neg.sum()
-            target[task * 2 + 1][0] = torch.Tensor([tc_pos, tc_neg])
-
-        return input, target
+            bias_target[task] = torch.Tensor([tc_pos, tc_neg])
+        return input, chip_seq_target, bias_target

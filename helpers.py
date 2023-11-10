@@ -3,7 +3,6 @@ from torch.distributions.multinomial import Multinomial
 import torch.nn.functional as F
 
 
-
 ONE_HOT_EMBED = torch.zeros(1000, 4)
 ONE_HOT_EMBED[ord("a")] = torch.Tensor([1.0, 0.0, 0.0, 0.0])
 ONE_HOT_EMBED[ord("c")] = torch.Tensor([0.0, 1.0, 0.0, 0.0])
@@ -23,10 +22,10 @@ ONE_HOT_EMBED[ord("O")] = torch.Tensor([0.0, 0.0, 0.0, 0.0])
 ONE_HOT_EMBED[ord("P")] = torch.Tensor([0.25, 0.25, 0.25, 0.25])
 ONE_HOT_EMBED[ord(".")] = torch.Tensor([0.25, 0.25, 0.25, 0.25])
 
+
 def seq_to_one_hot(seq: str) -> torch.Tensor:
     seq_chrs = torch.tensor(list(map(ord, list(seq))), dtype=torch.long)
     return ONE_HOT_EMBED[seq_chrs]
-
 
 
 def one_hot_encoder(dna_sequence):
@@ -60,8 +59,10 @@ def multinomial_nll(logits, true_counts):
         channel_loss = 0.0
         for j in range(num_channels):
             counts_per_example = int(true_counts_perm[i, j].sum().item())
-            multinomial_dist = Multinomial(counts_per_example, logits=logits_perm[i, j], validate_args=False)
-            neg_log_likelihood = -multinomial_dist.log_prob(true_counts_perm[i, j])
+            multinomial_dist = Multinomial(
+                counts_per_example, logits=logits_perm[i, j], validate_args=False)
+            neg_log_likelihood = - \
+                multinomial_dist.log_prob(true_counts_perm[i, j])
             channel_loss += neg_log_likelihood.sum()
         loss += channel_loss / float(num_channels)
 
@@ -78,10 +79,33 @@ loss_weights = [1, 10] * num_tasks
 def custom_loss(outputs, targets):
     total_loss = 0.0
     # change view to get task dimension first, batch dimension second
-    targets = targets.permute(1, 0, 2, 3)
+    chip_seq_targets = targets[0].permute(1, 0, 2, 3)
+    bias_targets = targets[1].permute(1, 0, 2)
     for i, loss_fn in enumerate(loss_functions):
-        if(i % 2 == 1):
-            total_loss += loss_weights[i] * loss_fn(outputs[i], targets[i][:,0,:])
+        if (i % 2 == 1):
+            total_loss += loss_weights[i] * loss_fn(
+                torch.log(1 + outputs[i]), torch.log(1 + bias_targets[i//2]))
         else:
-            total_loss += loss_weights[i] * loss_fn(outputs[i], targets[i])
+            total_loss += loss_weights[i] * \
+                loss_fn(outputs[i], chip_seq_targets[i//2])
     return total_loss
+
+
+def collate_fn(data):
+    """
+    Collates the data into a batch
+    :param data: this is a list of outputs of __getitem__ function in the dataset
+    :return: Tuple of batched data
+    """
+    # assume the dna seqs are the first item in the tuple
+    dna_seqs = torch.stack([item[0] for item in data])
+
+    # get chip-seq targets
+    # shape: (batch_size, 1000, 2)
+    chip_seq_targets = torch.stack([item[1] for item in data])
+
+    # get bias targets
+    # shape: (batch_size, 1, 2)
+    bias_targets = torch.stack([item[2] for item in data])
+
+    return dna_seqs, chip_seq_targets, bias_targets

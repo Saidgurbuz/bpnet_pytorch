@@ -20,7 +20,8 @@ class BPNet(nn.Module):
         self.profile_shape_heads = nn.ModuleList(
             [
                 nn.Sequential(
-                    nn.ConvTranspose2d(64, 2, kernel_size=(25, 1), padding=(12, 0)),
+                    nn.ConvTranspose2d(
+                        64, 2, kernel_size=(25, 1), padding=(12, 0)),
                     # nn.Flatten(), # check doing without this layer
                 )
                 for _ in range(num_tasks)
@@ -29,7 +30,8 @@ class BPNet(nn.Module):
 
         self.total_counts_heads = nn.ModuleList(
             [
-                nn.Sequential(nn.AdaptiveAvgPool1d(1), nn.Flatten(), nn.Linear(64, 2))
+                nn.Sequential(nn.AdaptiveAvgPool1d(
+                    1), nn.Flatten(), nn.Linear(64, 2))
                 for _ in range(num_tasks)
             ]
         )
