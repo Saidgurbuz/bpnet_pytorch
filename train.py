@@ -9,6 +9,7 @@ from Bio import SeqIO
 from Bio import Seq
 import pyBigWig
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
     if val_loader:
@@ -126,7 +127,7 @@ if __name__ == "__main__":
     test_loader = DataLoader(
         test_dataset, batch_size=batch_size, shuffle=False)
 
-    model = BPNet(num_tasks)
+    model = BPNet(num_tasks).to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     loss_fn = custom_loss
 
