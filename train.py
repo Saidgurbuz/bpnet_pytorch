@@ -19,7 +19,7 @@ def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
     for epoch in range(num_epochs):
         total_loss = 0.0
         for i, data in enumerate(train_loader):
-            inputs, chip_seq_targets, bias_targets = data
+            inputs, chip_seq_targets, bias_targets = data[0].to(device), data[1].to(device), data[2].to(device)
             optimizer.zero_grad()
 
             outputs = model(inputs)
