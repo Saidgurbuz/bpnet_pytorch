@@ -40,7 +40,7 @@ def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
             total_val_loss = 0.0
             with torch.no_grad():
                 for index, data in enumerate(val_loader):
-                    inputs, chip_seq_targets, bias_targets = data
+                    inputs, chip_seq_targets, bias_targets = data[0].to(device), data[1].to(device), data[2].to(device)
                     outputs = model(inputs)
                     loss = loss_fn(outputs, (chip_seq_targets, bias_targets))
                     total_val_loss += loss
