@@ -3,8 +3,6 @@ from torch.utils.data import Dataset
 from helpers import one_hot_encoder
 from helpers import seq_to_one_hot
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 class DNADataset(Dataset):
     def __init__(self, inputs, targets, sequence_length, num_tasks):
         self.inputs = inputs
@@ -31,11 +29,11 @@ class DNADataset(Dataset):
         start = offset
         end = start + self.sequence_length
         # get input
-        seq_input = seq_to_one_hot(str(chr.seq[start:end])).to(device)
+        seq_input = seq_to_one_hot(str(chr.seq[start:end]))
 
         # get profile shape and bias targets
-        chip_seq_target = torch.zeros(self.num_tasks, self.sequence_length, 2).to(device)
-        bias_target = torch.zeros(self.num_tasks, 2).to(device)
+        chip_seq_target = torch.zeros(self.num_tasks, self.sequence_length, 2)
+        bias_target = torch.zeros(self.num_tasks, 2)
         name_chr = self.targets[0][chr_idx]
         for task in range(self.num_tasks):
             # get profile shape for both positive and negative strands
