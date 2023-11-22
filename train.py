@@ -120,12 +120,12 @@ if __name__ == "__main__":
     val_dataset = DNADataset(
         val_sequences, val_targets, sequence_length, num_tasks)
     val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False)
+        val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 
     test_dataset = DNADataset(
         test_sequences, test_targets, sequence_length, num_tasks)
     test_loader = DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=False)
+        test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 
     model = BPNet(num_tasks).to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
