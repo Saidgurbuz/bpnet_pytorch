@@ -9,6 +9,7 @@ from Bio import SeqIO
 from Bio import Seq
 import pyBigWig
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
     if val_loader:
@@ -18,7 +19,7 @@ def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
     for epoch in range(num_epochs):
         total_loss = 0.0
         for i, data in enumerate(train_loader):
-            inputs, chip_seq_targets, bias_targets = data
+            inputs, chip_seq_targets, bias_targets = data[0].to(device), data[1].to(device), data[2].to(device)
             optimizer.zero_grad()
 
             outputs = model(inputs)
@@ -39,7 +40,7 @@ def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
             total_val_loss = 0.0
             with torch.no_grad():
                 for index, data in enumerate(val_loader):
-                    inputs, chip_seq_targets, bias_targets = data
+                    inputs, chip_seq_targets, bias_targets = data[0].to(device), data[1].to(device), data[2].to(device)
                     outputs = model(inputs)
                     loss = loss_fn(outputs, (chip_seq_targets, bias_targets))
                     total_val_loss += loss
@@ -117,16 +118,16 @@ if __name__ == "__main__":
         train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
     val_dataset = DNADataset(
-        train_sequences, val_targets, sequence_length, num_tasks)
+        val_sequences, val_targets, sequence_length, num_tasks)
     val_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=False)
+        val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 
     test_dataset = DNADataset(
-        train_sequences, test_targets, sequence_length, num_tasks)
+        test_sequences, test_targets, sequence_length, num_tasks)
     test_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=False)
+        test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 
-    model = BPNet(num_tasks)
+    model = BPNet(num_tasks).to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     loss_fn = custom_loss
 

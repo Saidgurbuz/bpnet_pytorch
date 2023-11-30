@@ -3,7 +3,6 @@ from torch.utils.data import Dataset
 from helpers import one_hot_encoder
 from helpers import seq_to_one_hot
 
-
 class DNADataset(Dataset):
     def __init__(self, inputs, targets, sequence_length, num_tasks):
         self.inputs = inputs
@@ -30,7 +29,7 @@ class DNADataset(Dataset):
         start = offset
         end = start + self.sequence_length
         # get input
-        input = seq_to_one_hot(str(chr.seq[start:end]))
+        seq_input = seq_to_one_hot(str(chr.seq[start:end]))
 
         # get profile shape and bias targets
         chip_seq_target = torch.zeros(self.num_tasks, self.sequence_length, 2)
@@ -50,4 +49,4 @@ class DNADataset(Dataset):
             tc_pos = ps_pos.sum()
             tc_neg = ps_neg.sum()
             bias_target[task] = torch.Tensor([tc_pos, tc_neg])
-        return input, chip_seq_target, bias_target
+        return seq_input, chip_seq_target, bias_target
