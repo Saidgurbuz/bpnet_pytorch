@@ -18,19 +18,15 @@ def test_bpnet_model():
     outputs = model(
         dna_batch.unsqueeze(0)
         .view(batch_size, sequence_length, num_channels)
-        .permute(0, 2, 1)
     )
     assert outputs[0].shape == (
         batch_size, sequence_length, 2)  # profile head output
     assert outputs[1].shape == (batch_size, 2)  # total counts head output
 
-    targets = []
-    for i in range(num_tasks * 2):
-        if i % 2 == 0:
-            targets.append(torch.randint(2, (batch_size, sequence_length, 2)))
-        else:
-            targets.append(torch.rand(batch_size, 2))
-    loss = custom_loss(outputs=outputs, targets=targets)
+    chip_seq_targets = torch.randint(2, (batch_size, num_tasks, sequence_length, 2))
+    bias_targets = torch.rand(batch_size, num_tasks, 2)
+
+    loss = custom_loss(outputs=outputs, targets=(chip_seq_targets, bias_targets))
     loss.backward()
     assert loss > 0.0
     return

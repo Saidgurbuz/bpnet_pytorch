@@ -8,6 +8,7 @@ import torch.optim as optim
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+
 def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
     if val_loader:
         patience = 20

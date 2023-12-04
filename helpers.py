@@ -81,6 +81,7 @@ def custom_loss(outputs, targets):
     # change view to get task dimension first, batch dimension second
     chip_seq_targets = targets[0].permute(1, 0, 2, 3)
     bias_targets = targets[1].permute(1, 0, 2)
+
     for i, loss_fn in enumerate(loss_functions):
         if (i % 2 == 1):
             total_loss += loss_weights[i] * loss_fn(
@@ -89,6 +90,15 @@ def custom_loss(outputs, targets):
             total_loss += loss_weights[i] * \
                 loss_fn(outputs[i], chip_seq_targets[i//2])
     return total_loss
+
+    # TODO: alternative once we figure out how to parallelize multinomial_nll over batch dimension
+    # chip_seq_outputs = torch.stack(outputs[0::2])
+    # bias_outputs = torch.stack(outputs[1::2])
+    #
+    # chip_seq_loss = 0.
+    # bias_loss = F.mse_loss(bias_outputs, bias_targets)
+    #
+    # loss = chip_seq_loss_weight * chip_seq_loss + bias_loss_weight * bias_loss
 
 
 def collate_fn(data):
