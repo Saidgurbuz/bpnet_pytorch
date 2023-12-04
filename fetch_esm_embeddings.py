@@ -65,7 +65,7 @@ def main(args):
             "prot_seq_aa_seq_len": prot_seq_lens[idx],
         }
 
-    with open(os.path.join(args.output_dir, "prot_idx_to_metadata"), 'w') as f:
+    with open(os.path.join(args.output_dir, "prot_idx_to_metadata.json"), 'w') as f:
         json.dump(metadata, f)
 
 

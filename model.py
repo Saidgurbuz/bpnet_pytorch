@@ -87,7 +87,18 @@ class BPNetWithProteinEmbeddings(nn.Module):
         self.profile_head_neg = nn.Linear(1000, 1000)
         self.total_counts_head = nn.Linear(1000, 2)
 
-    def forward(self, dna_seq: torch.Tensor, prot_embeddings: torch.Tensor):
+    def forward(
+            self,
+            dna_seq: torch.Tensor,
+            prot_embeddings: torch.Tensor,
+            prot_attention_mask: torch.Tensor = None,
+    ):
+        """
+        :param dna_seq: DNA seq torch.Tensor of shape [batch_size, sequence_length, 4]
+        :param prot_embeddings: Protein embeddings torch.Tensor of shape [n_prots, n_amino_acids, amino_acid_emb_dim]
+        :param prot_embeddings_attention_mask: Attention mask for the protein embeddings torch.Tensor of shape
+            [n_prots, n_amino_acids]. This is used to mask the padding tokens in the protein embeddings.
+        """
         # DNA sequence
         dna_emb = self.conv_layers(dna_seq)
         dna_emb = self.conv_transpose(dna_emb.unsqueeze(3)).squeeze(-1).squeeze(1)
@@ -99,7 +110,10 @@ class BPNetWithProteinEmbeddings(nn.Module):
         # TODO: repeat the dna_emb to match the number of unique prot_emb
         # TODO: calculate cross-attention
         batch_size, dim = dna_emb.shape
-        n_prot, _ = prot_emb.shape
+        n_prot, n_amino_acids, _ = prot_emb.shape
+        # replace it with cross attention
+        # compute cross attention and use the dna embedding
+        # dummy data for now
         prot_dna_cross_att_output = torch.randn(batch_size, n_prot, dim)
 
         # final layers
