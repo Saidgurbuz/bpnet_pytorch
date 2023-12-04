@@ -68,9 +68,8 @@ class BPNet(nn.Module):
 
 
 class BPNetWithProteinEmbeddings(nn.Module):
-    def __init__(self, num_tasks, protein_embedding_dim=256):
+    def __init__(self, protein_embedding_dim: int = 1280):
         super(BPNetWithProteinEmbeddings, self).__init__()
-        self.num_tasks = num_tasks
         self.protein_embedding_dim = protein_embedding_dim
 
         self.conv_layers = ConvEncoder()
@@ -84,13 +83,14 @@ class BPNetWithProteinEmbeddings(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.2),
         )
-        self.profile_head = nn.Linear(1000, 2)
+        self.profile_head_pos = nn.Linear(1000, 1000)
+        self.profile_head_neg = nn.Linear(1000, 1000)
         self.total_counts_head = nn.Linear(1000, 2)
 
     def forward(self, dna_seq: torch.Tensor, prot_embeddings: torch.Tensor):
         # DNA sequence
         dna_emb = self.conv_layers(dna_seq)
-        dna_emb = self.conv_transpose(dna_emb.unsqueeze(3)).squeeze(-1).permute(0, 2, 1)
+        dna_emb = self.conv_transpose(dna_emb.unsqueeze(3)).squeeze(-1).squeeze(1)
 
         # Protein embeddings
         prot_emb = self.protein_embedder(prot_embeddings)
@@ -103,8 +103,17 @@ class BPNetWithProteinEmbeddings(nn.Module):
         prot_dna_cross_att_output = torch.randn(batch_size, n_prot, dim)
 
         # final layers
-        profile_shape_output = self.profile_head(prot_dna_cross_att_output)
-        total_counts_output = self.total_counts_head(prot_dna_cross_att_output)
+        profile_pred_pos = self.profile_head_pos(prot_dna_cross_att_output)
+        profile_pred_neg = self.profile_head_neg(prot_dna_cross_att_output)
+        profile_pred = torch.stack([profile_pred_pos, profile_pred_neg], dim=3)
+        total_counts_pred = self.total_counts_head(prot_dna_cross_att_output)
 
-        # TODO: adapt the outputs to be similar as the BPNet above
-        return
+        # TODO: change the output of the BPNet model, rather than adapting this version to the BPNet
+        # ideally, the output should be chip_seq_preds [bs, n_prots, 1000, 2] and bias_preds [bs, n_prots, 2]
+        # below is a quick fix for it to work with how it works now
+        output = []
+        for i in range(n_prot):
+            output.append(profile_pred[:, i, :, :])
+            output.append(total_counts_pred[:, i, :])
+
+        return output
