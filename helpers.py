@@ -84,8 +84,10 @@ def custom_loss(outputs, targets):
 
     for i, loss_fn in enumerate(loss_functions):
         if (i % 2 == 1):
+            # here we don't do log1p of the output, it's enough to just normalise the target and the
+            # model will learn to predict the log1p(bias) values
             total_loss += loss_weights[i] * loss_fn(
-                torch.log(1 + outputs[i]), torch.log(1 + bias_targets[i//2]))
+                outputs[i], torch.log(1 + bias_targets[i//2]))
         else:
             total_loss += loss_weights[i] * \
                 loss_fn(outputs[i], chip_seq_targets[i//2])
@@ -119,3 +121,16 @@ def collate_fn(data):
     bias_targets = torch.stack([item[2] for item in data])
 
     return dna_seqs, chip_seq_targets, bias_targets
+
+
+def get_prot_embeddings_attention_mask(prot_seq_lens):
+    """
+    Returns the attention mask for the protein embeddings
+    :param prot_seq_lens: list of protein sequence lengths
+    :return: attention mask for the protein embeddings
+    """
+    max_prot_seq_len = max(prot_seq_lens)
+    prot_att_mask = torch.zeros(len(prot_seq_lens), max_prot_seq_len)
+    for i, prot_seq_len in enumerate(prot_seq_lens):
+        prot_att_mask[i, :prot_seq_len] = 1
+    return prot_att_mask
