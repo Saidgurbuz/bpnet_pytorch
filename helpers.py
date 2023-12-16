@@ -73,7 +73,8 @@ def multinomial_nll(logits, true_counts):
 
 num_tasks = 4
 loss_functions = [multinomial_nll, F.mse_loss] * num_tasks
-loss_weights = [1, 10] * num_tasks
+chip_seq_loss_weight = 1.0
+bias_loss_weight = 10.0
 
 
 def custom_loss(outputs, targets):
@@ -81,16 +82,13 @@ def custom_loss(outputs, targets):
     # change view to get task dimension first, batch dimension second
     chip_seq_targets = targets[0].permute(1, 0, 2, 3)
     bias_targets = targets[1].permute(1, 0, 2)
+    chip_seq_outputs = outputs[0].permute(1, 0, 2, 3)
+    bias_outputs = outputs[1].permute(1, 0, 2)
 
-    for i, loss_fn in enumerate(loss_functions):
-        if (i % 2 == 1):
-            # here we don't do log1p of the output, it's enough to just normalise the target and the
-            # model will learn to predict the log1p(bias) values
-            total_loss += loss_weights[i] * loss_fn(
-                outputs[i], torch.log(1 + bias_targets[i//2]))
-        else:
-            total_loss += loss_weights[i] * \
-                loss_fn(outputs[i], chip_seq_targets[i//2])
+    for i in range(bias_targets.size(0)):
+        total_loss += multinomial_nll(chip_seq_outputs[i], chip_seq_targets[i]) * chip_seq_loss_weight
+        total_loss += F.mse_loss(bias_outputs[i], torch.log(1 + bias_targets[i])) * bias_loss_weight
+
     return total_loss
 
     # TODO: alternative once we figure out how to parallelize multinomial_nll over batch dimension

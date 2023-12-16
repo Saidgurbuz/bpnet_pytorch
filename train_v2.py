@@ -1,15 +1,15 @@
-from model import BPNet
+from model import BPNet, BPNetWithProteinEmbeddings
 from dataset_v2 import DNADataset
-from helpers import collate_fn
-from helpers import custom_loss
+from helpers import collate_fn, custom_loss, get_prot_embeddings_attention_mask
 from torch.utils.data import DataLoader
 import torch
+import json
 import torch.optim as optim
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
+def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None, with_prot_emb=False, prot_embs=None, prot_att_mask=None):
     if val_loader:
         patience = 20
         best_val_loss = float("inf")
@@ -20,8 +20,10 @@ def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
             inputs, chip_seq_targets, bias_targets = data[0].to(device), data[1].to(device), data[2].to(device)
             optimizer.zero_grad()
 
-            outputs = model(inputs)
-            loss = loss_fn(outputs, (chip_seq_targets, bias_targets))
+            if(with_prot_emb):
+                chip_seq_outputs, bias_outputs = model(inputs, prot_embs, prot_att_mask)
+            chip_seq_outputs, bias_outputs = model(inputs)
+            loss = loss_fn((chip_seq_outputs, bias_outputs), (chip_seq_targets, bias_targets))
             print(
                 "Epoch [{}/{}], Batch [{}/{}] train loss: {}".format(
                     epoch + 1, num_epochs, i+1, len(train_loader), loss
@@ -40,8 +42,10 @@ def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
             with torch.no_grad():
                 for index, data in enumerate(val_loader):
                     inputs, chip_seq_targets, bias_targets = data[0].to(device), data[1].to(device), data[2].to(device)
-                    outputs = model(inputs)
-                    loss = loss_fn(outputs, (chip_seq_targets, bias_targets))
+                    if(with_prot_emb):
+                        chip_seq_outputs, bias_outputs = model(inputs, prot_embs, prot_att_mask)
+                    chip_seq_outputs, bias_outputs = model(inputs)
+                    loss = loss_fn((chip_seq_outputs, bias_outputs), (chip_seq_targets, bias_targets))
                     total_val_loss += loss
                 avg_val_loss = total_val_loss / (index + 1)
             print(
@@ -71,6 +75,9 @@ def train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=None):
 
 if __name__ == "__main__":
 
+    with_prot_emb = False
+    prot_embeddings = None
+    prot_att_mask = None
     sequence_length = 1000
     num_tasks = 4
     batch_size = 2048
@@ -108,10 +115,21 @@ if __name__ == "__main__":
     test_loader = DataLoader(
         test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=8, pin_memory=True)
 
-    model = BPNet(num_tasks).to(device)
+    if(with_prot_emb):
+        protein_embedding_dim = 1280
+
+        with open('prot_data/prot_idx_to_metadata.json', 'r') as f:
+            prot_idx_to_metadata = json.load(f)
+        prot_seq_lens = [item['dna_binding_domain_aa_seq_len'] for item in prot_idx_to_metadata.values()]
+        prot_att_mask = get_prot_embeddings_attention_mask(prot_seq_lens)
+        prot_embeddings = torch.load(
+            'prot_data/dna_binding_domain_aa_prot_embeds.pt', map_location='cpu')
+        model = BPNetWithProteinEmbeddings(protein_embedding_dim).to(device)
+    else:
+        model = BPNet(num_tasks).to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     loss_fn = custom_loss
 
     # train
-    train(train_loader, model, num_epochs, optimizer,
-          loss_fn, val_loader=val_loader)
+    train(train_loader, model, num_epochs, optimizer, loss_fn, val_loader=val_loader, 
+          with_prot_emb=with_prot_emb, prot_embs=prot_embeddings, prot_att_mask=prot_att_mask)

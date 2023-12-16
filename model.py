@@ -53,18 +53,23 @@ class BPNet(nn.Module):
         x = self.conv_layers(x)
 
         # Profile Shape and Total Counts Heads
-        outputs = []
+        chip_seq_outputs = []
+        bias_outputs = []
         for index in range(self.num_tasks):
             px = (
                 self.profile_shape_heads[index](x.unsqueeze(3))
                 .squeeze(-1)
                 .permute(0, 2, 1)
             )
-            outputs.append(px)  # profile shape output appended
+            chip_seq_outputs.append(px)  # profile shape output appended
             cx = self.total_counts_heads[index](x)
-            outputs.append(cx)  # total counts output appended
+            bias_outputs.append(cx)  # total counts output appended
 
-        return outputs
+        # Outputs are stacked along the second dimension
+        chip_seq_outputs = torch.stack(chip_seq_outputs, dim=1)
+        bias_outputs = torch.stack(bias_outputs, dim=1)
+
+        return chip_seq_outputs, bias_outputs
 
 
 class BPNetWithProteinEmbeddings(nn.Module):
@@ -131,12 +136,4 @@ class BPNetWithProteinEmbeddings(nn.Module):
         profile_pred = torch.stack([profile_pred_pos, profile_pred_neg], dim=3)
         total_counts_pred = self.total_counts_head(prot_dna_cross_att_output)
 
-        # TODO: change the output of the BPNet model, rather than adapting this version to the BPNet
-        # ideally, the output should be chip_seq_preds [bs, n_prots, 1000, 2] and bias_preds [bs, n_prots, 2]
-        # below is a quick fix for it to work with how it works now
-        output = []
-        for i in range(n_prot):
-            output.append(profile_pred[:, i, :, :])
-            output.append(total_counts_pred[:, i, :])
-
-        return output
+        return profile_pred, total_counts_pred
