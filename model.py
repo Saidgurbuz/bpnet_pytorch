@@ -83,6 +83,9 @@ class BPNetWithProteinEmbeddings(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.2),
         )
+
+        self.multihead_attention = nn.MultiheadAttention(1000, num_heads=1, batch_first=True)
+
         self.profile_head_pos = nn.Linear(1000, 1000)
         self.profile_head_neg = nn.Linear(1000, 1000)
         self.total_counts_head = nn.Linear(1000, 2)
@@ -106,15 +109,21 @@ class BPNetWithProteinEmbeddings(nn.Module):
         # Protein embeddings
         prot_emb = self.protein_embedder(prot_embeddings)
 
-        # TODO: implement cross-attention here
-        # TODO: repeat the dna_emb to match the number of unique prot_emb
-        # TODO: calculate cross-attention
+        # Cross-attention
         batch_size, dim = dna_emb.shape
         n_prot, n_amino_acids, _ = prot_emb.shape
-        # replace it with cross attention
-        # compute cross attention and use the dna embedding
-        # dummy data for now
-        prot_dna_cross_att_output = torch.randn(batch_size, n_prot, dim)
+        # Repeat the protein embeddings along the batch dimension to match the batch size of dna_emb
+        prot_emb_repeated = prot_emb.unsqueeze(0).expand(batch_size, -1, -1, -1)
+        # Repeat dna_emb along the second dimension (n_prot)
+        dna_emb_repeated = dna_emb.unsqueeze(1).expand(-1, n_prot, -1)
+        # Reshape prot_emb to (batch_size * n_prot, n_amino_acids, embed_dim)
+        prot_emb_reshaped = prot_emb_repeated.reshape(-1, n_amino_acids, dim)
+        # Reshape dna_emb_repeated to (batch_size * n_prot, 1, embed_dim)
+        dna_emb_reshaped = dna_emb_repeated.reshape(-1, 1, dim)
+        # Perform cross-attention for all proteins
+        prot_dna_cross_att_output, _ = self.multihead_attention(dna_emb_reshaped, prot_emb_reshaped, prot_emb_reshaped)
+        # Reshape output to (batch_size, n_prot, embed_dim)
+        prot_dna_cross_att_output = prot_dna_cross_att_output.view(batch_size, n_prot, dim)
 
         # final layers
         profile_pred_pos = self.profile_head_pos(prot_dna_cross_att_output)
