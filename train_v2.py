@@ -78,17 +78,19 @@ if __name__ == "__main__":
     learning_rate = 0.004
     tasks = ['oct4', 'sox2', 'nanog', 'klf4']
 
-    train_inputs = torch.load('train_inputs.pt')
-    train_targets_chip_seq = torch.load('train_targets_chip_seq.pt')
-    train_targets_bias = torch.load('train_targets_bias.pt')
+    dna_data_dir = 'dna_data/'
 
-    val_inputs = torch.load('val_inputs.pt')
-    val_targets_chip_seq = torch.load('val_targets_chip_seq.pt')
-    val_targets_bias = torch.load('val_targets_bias.pt')
+    train_inputs = torch.load(f'{dna_data_dir}train_inputs.pt')
+    train_targets_chip_seq = torch.load(f'{dna_data_dir}train_targets_chip_seq.pt')
+    train_targets_bias = torch.load(f'{dna_data_dir}train_targets_bias.pt')
 
-    test_inputs = torch.load('test_inputs.pt')
-    test_targets_chip_seq = torch.load('test_targets_chip_seq.pt')
-    test_targets_bias = torch.load('test_targets_bias.pt')
+    val_inputs = torch.load(f'{dna_data_dir}val_inputs.pt')
+    val_targets_chip_seq = torch.load(f'{dna_data_dir}val_targets_chip_seq.pt')
+    val_targets_bias = torch.load(f'{dna_data_dir}val_targets_bias.pt')
+
+    test_inputs = torch.load(f'{dna_data_dir}test_inputs.pt')
+    test_targets_chip_seq = torch.load(f'{dna_data_dir}test_targets_chip_seq.pt')
+    test_targets_bias = torch.load(f'{dna_data_dir}test_targets_bias.pt')
 
 
     train_dataset = DNADataset(

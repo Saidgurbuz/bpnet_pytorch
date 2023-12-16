@@ -1,3 +1,4 @@
+import os
 from model import BPNet
 from dataset import DNADataset
 from helpers import collate_fn
@@ -90,14 +91,17 @@ if __name__ == "__main__":
     val_chrs = ['chr16', 'chr17', 'chr18']
     test_chrs = ['chr19', 'chrX', 'chrY']
 
-    dna_file = 'mm10.fa'
+    # Set the path to the dna_data directory
+    dna_data_dir = 'dna_data/'
+
+    dna_file = os.path.join(dna_data_dir, 'mm10.fa')
 
     # get labels
     pos_counts = []
     neg_counts = []
     for task in tasks:
-        pos_counts.append(pyBigWig.open(f'{task}-counts.pos.bw'))
-        neg_counts.append(pyBigWig.open(f'{task}-counts.neg.bw'))
+        pos_counts.append(pyBigWig.open(os.path.join(dna_data_dir, f'{task}-counts.pos.bw')))
+        neg_counts.append(pyBigWig.open(os.path.join(dna_data_dir, f'{task}-counts.neg.bw')))
 
     # dna_sequences
     with open(dna_file, 'r') as file:

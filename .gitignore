@@ -1,0 +1,10 @@
+# .gitignore
+
+# Ignore dna_data folder and its contents
+dna_data/
+
+# Ignore output folder and its contents
+output/
+
+# Ignore __pycache__ folder and its contents
+__pycache__/
